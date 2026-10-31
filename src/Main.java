@@ -1,54 +1,47 @@
-import java.util.function.BiPredicate;
+import java.util.function.Predicate;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Main {
-    // A long secret and many repetitions make the timing difference easy to see.
     private static final int SECRET_LENGTH = 100_000;
     private static final int ITERATIONS = 20_000;
 
     public static void main(String[] args) {
-        Secrets secrets = new Secrets();
-        String token = "a".repeat(SECRET_LENGTH);
-        secrets.put("apiToken", token);
+        String secret = "a".repeat(SECRET_LENGTH);
+        SecretStore store = new SecretStore(secret);
 
-        // Same length as the real token, but wrong at the very start or the very end.
-        String wrongFirstChar = "b" + token.substring(1);
-        String wrongLastChar = token.substring(0, SECRET_LENGTH - 1) + "b";
+        String wrongFirst = "b" + secret.substring(1);
+        String wrongLast = secret.substring(0, SECRET_LENGTH - 1) + "b";
 
-        System.out.println("Correct token accepted (leaky): " + secrets.leakyMatches("apiToken", token));
-        System.out.println("Correct token accepted (safe):  " + secrets.safeMatches("apiToken", token));
+        System.out.println("Timing two wrong guesses against a secret:");
+        System.out.println("one wrong at the first character, one wrong at the last.");
+        System.out.println("If the times differ, an attacker can guess the secret one character at a time.");
         System.out.println();
 
-        compare("Leaky String.equals()", secrets::leakyMatches, wrongFirstChar, wrongLastChar);
-        compare("Safe MessageDigest.isEqual()", secrets::safeMatches, wrongFirstChar, wrongLastChar);
-    }
-
-    private static void compare(String label, BiPredicate<String, String> check,
-                                String wrongFirstChar, String wrongLastChar) {
-        // Warm up so the JIT compiler doesn't distort the first measurement.
-        time(check, wrongFirstChar);
-        time(check, wrongLastChar);
-
-        long firstMs = time(check, wrongFirstChar);
-        long lastMs = time(check, wrongLastChar);
-
-        System.out.println(label);
-        System.out.println("  guess wrong at first char: " + firstMs + " ms");
-        System.out.println("  guess wrong at last char:  " + lastMs + " ms");
+        System.out.println("THE PROBLEM: insecureEquals() using String.equals()");
+        report(store::insecureEquals, wrongFirst, wrongLast);
+        System.out.println("  -> LEAKS: the closer guess takes longer to reject.");
         System.out.println();
+
+        System.out.println("THE SOLUTION: constantTimeEquals() using MessageDigest.isEqual()");
+        report(store::constantTimeEquals, wrongFirst.getBytes(UTF_8), wrongLast.getBytes(UTF_8));
+        System.out.println("  -> SAFE: both guesses take about the same time.");
     }
 
-    private static long time(BiPredicate<String, String> check, String guess) {
-        int accepted = 0;
+    private static <T> void report(Predicate<T> check, T wrongFirst, T wrongLast) {
+        time(check, wrongFirst);
+        time(check, wrongLast);
+        System.out.println("  wrong at first char: " + time(check, wrongFirst) + " ms");
+        System.out.println("  wrong at last char:  " + time(check, wrongLast) + " ms");
+    }
+
+    private static <T> long time(Predicate<T> check, T guess) {
         long start = System.nanoTime();
         for (int i = 0; i < ITERATIONS; i++) {
-            if (check.test("apiToken", guess)) {
-                accepted++;
+            if (check.test(guess)) {
+                throw new IllegalStateException("A wrong guess was accepted");
             }
         }
-        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-        if (accepted != 0) {
-            throw new IllegalStateException("A wrong guess was accepted");
-        }
-        return elapsedMs;
+        return (System.nanoTime() - start) / 1_000_000;
     }
 }
