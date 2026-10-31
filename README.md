@@ -1,5 +1,7 @@
 # SecretsProtection-
 
+A small repo to learn one of the ways to protect secrets: comparing them in constant time so the check doesn't leak timing information.
+
 ## Requirements
 
 - JDK 11 or newer
