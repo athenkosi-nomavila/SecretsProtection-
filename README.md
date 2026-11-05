@@ -43,14 +43,14 @@ In an IDE such as IntelliJ, mark `src` as the sources root and run `Main`.
 The program runs the same attack twice, once against each way of checking the code.
 
 ```
-1. THE MISTAKE: the server checks the code with String.equals()
+1. UNSAFE CHECK: String.equals() stops at the first wrong digit
    digit 1: slowest guess was 4, so the attacker keeps it -> 4_____
    digit 2: slowest guess was 8, so the attacker keeps it -> 48____
    ...
    digit 6: tried all 10 options, 0 logged in -> 483920
    -> HACKED: the attacker found the code in at most 60 guesses instead of 1,000,000.
 
-2. THE FIX: the server checks the code with MessageDigest.isEqual()
+2. SAFE CHECK: MessageDigest.isEqual() always checks every digit
    digit 1: slowest guess was 0, so the attacker keeps it -> 0_____
    ...
    digit 6: tried all 10 options, none logged in.

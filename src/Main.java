@@ -25,11 +25,11 @@ public class Main {
         System.out.println(" thousands of times. This demo makes each digit bigger so your machine can show it.)");
         System.out.println();
 
-        System.out.println("1. THE MISTAKE: the server checks the code with String.equals()");
+        System.out.println("1. UNSAFE CHECK: String.equals() stops at the first wrong digit");
         attack(Main::stretch, server::insecureEquals);
         System.out.println();
 
-        System.out.println("2. THE FIX: the server checks the code with MessageDigest.isEqual()");
+        System.out.println("2. SAFE CHECK: MessageDigest.isEqual() always checks every digit");
         attack(guess -> stretch(guess).getBytes(UTF_8), server::constantTimeEquals);
         System.out.println();
 
